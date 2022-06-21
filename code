@@ -1,0 +1,68 @@
+import requests
+from bs4 import BeautifulSoup
+import re
+
+def extractThemeUrls():
+    url ="https://www.lego.com/en-us/themes"
+#     headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36"}
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text)
+    lis = soup.find("ul","CategoryListingPagestyle__List-sc-880qxz-5 bSfYDx").find_all("li")
+    urls = [] #get all the themes urls from the theme website
+    for li in lis:
+        href = li.find('a').get('href')
+        href = "https://www.lego.com" + href
+        urls.append(href)
+    return urls
+
+
+themeUrls = extractThemeUrls()
+
+themeUrls
+
+def extractAllPages(themeUrls):
+    pageList = []
+    for eachTheme in themeUrls:
+        headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36"}
+        response = requests.get(eachTheme, headers)
+        soup = BeautifulSoup(response.text)
+        allPageLink = []
+        total = re.search('\"total\":(.+?),', response.text).group(1)
+        count = re.search('\"perPage\\\\\":(.+?),', response.text).group(1)
+        total_page = int(int(total) / int(count)) + 1
+        if total_page == 1:
+            allPageLink.append(eachTheme)
+            pageList.append(allPageLink)
+        elif total_page > 1:   
+            allPageLink.append(eachTheme)
+            for page in range(2,total_page+1):
+                newlink = (pageLink[:-1]+"{}").format(page)
+                allPageLink.append(newlink)
+            pageList.append(allPageLink)
+    return pageList
+
+themeUrls = ['https://www.lego.com/en-us/themes/city']
+
+
+allItemPages = extractAllPages(themeUrls)
+allItemPages
+
+def extractItemPage(allItemPages):
+    itemList = []
+    for eachTheme in allItemPages:
+        for eachPage in eachTheme:
+            headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36"}
+            response = requests.get(eachPage, headers)
+            soup = BeautifulSoup(response.text)
+            itemLinks = soup.find("ul", "ProductGridstyles__Grid-lc2zkx-0 gxucff").find_all("li")
+
+            for eachItem in itemLinks:
+                if eachItem.find("div", "ProductLeafSharedstyles__ImageRow-sc-1epu2xb-3 ProductLeafListingstyles__ImageRow-sc-19n1otk-5 jAJcWS"):
+                    item = eachItem.find("div", "ProductLeafSharedstyles__ImageRow-sc-1epu2xb-3 ProductLeafListingstyles__ImageRow-sc-19n1otk-5 jAJcWS").find("a").get("href")
+                    item = "https://www.lego.com" + item
+                    itemList.append(item)
+    return itemList
+
+
+
+extractItemPage(allItemPages)
